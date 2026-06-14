@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skyblock Insights</title>
+    <style>
+        :root {
+            --bg: #0f0f12;
+            --card-bg: #16161d;
+            --accent: #a277ff;
+            --gold: #ffb86c;
+            --text: #f8f8f2;
+            --sub-text: #9494b8;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            padding-top: 10vh;
+        }
+
+        .app-shell {
+            width: 100%;
+            max-width: 480px;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: var(--gold);
+            letter-spacing: -1px;
+            margin-bottom: 8px;
+        }
+
+        .search-area {
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        input {
+            width: 100%;
+            padding: 16px 20px;
+            box-sizing: border-box;
+            background: var(--card-bg);
+            border: 1px solid #2d2d3d;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(162, 119, 255, 0.1);
+        }
+
+        button {
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            bottom: 8px;
+            background: var(--accent);
+            border: none;
+            border-radius: 8px;
+            padding: 0 20px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button:active {
+            transform: scale(0.96);
+        }
+
+        .profile-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid #2d2d3d;
+            display: none;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            background: #2d2d3d;
+            border-radius: 8px;
+        }
+
+        .stats-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+        }
+
+        .label { color: var(--sub-text); font-size: 0.9rem; }
+        .value { color: var(--accent); font-weight: 600; }
+
+        #status {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #ff5555;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-shell">
+    <header>
+        <h1>Skyblock Tracker</h1>
+        <div style="color: var(--sub-text)">Live profile and economy lookup</div>
+    </header>
+
+    <div class="search-area">
+        <input type="text" id="target" placeholder="Enter username...">
+        <button onclick="runLookup()">View</button>
+    </div>
+
+    <div id="status"></div>
+
+    <div class="profile-card" id="display">
+        <div class="profile-header">
+            <img id="face" class="avatar" src="" alt="">
+            <div>
+                <div id="name" style="font-weight: bold; font-size: 1.2rem;"></div>
+                <div id="uuid-label" style="font-size: 0.7rem; color: var(--sub-text)"></div>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-item">
+                <span class="label">Primary Profile</span>
+                <span class="value" id="p-name">Scanning...</span>
+            </div>
+            <div class="stat-item">
+                <span class="label">Networth</span>
+                <span class="value" id="p-nw">Locked</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function runLookup() {
+        const user = document.getElementById('target').value;
+        const status = document.getElementById('status');
+        const display = document.getElementById('display');
+
+        status.innerText = "";
+        
+        if (!user) return;
+
+        try {
+            const playerReq = await fetch(`https://api.mojang.com/users/profiles/minecraft/${user}`);
+            if (!playerReq.ok) throw new Error("Could not find that player.");
+            
+            const data = await playerReq.json();
+            
+            document.getElementById('name').innerText = data.name;
+            document.getElementById('uuid-label').innerText = data.id;
+            document.getElementById('face').src = `https://mc-heads.net/avatar/${data.id}/48`;
+            
+            display.style.display = 'block';
+
+        } catch (e) {
+            display.style.display = 'none';
+            status.innerText = e.message;
+        }
+    }
+
+    document.getElementById('target').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') runLookup();
+    });
+</script>
+
+</body>
+</html>
