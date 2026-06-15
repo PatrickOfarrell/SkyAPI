@@ -1,13 +1,16 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const uuid = url.searchParams.get("uuid");
+    const username = url.searchParams.get("username");
 
-    if (!uuid) {
-      return new Response(JSON.stringify({ error: "Missing player UUID" }), { status: 400 });
+    if (!username) {
+      return new Response(JSON.stringify({ error: "Missing username" }), { 
+        status: 400,
+        headers: { "Access-Control-Allow-Origin": "*" }
+      });
     }
 
-    const cacheKey = `sb-profile-${uuid}`;
+    const cacheKey = `sb-user-${username.toLowerCase()}`;
     const cachedData = await env.SKYBLOCK_CACHE.get(cacheKey);
     
     if (cachedData) {
@@ -20,9 +23,19 @@ export default {
       });
     }
 
-    const hypixelUrl = `https://api.hypixel.net/v2/skyblock/profiles?uuid=${uuid}`;
-    
     try {
+      const mojangRes = await fetch(`https://api.mojang.com/users/profiles/minecraft/${username}`);
+      if (!mojangRes.ok) {
+        return new Response(JSON.stringify({ error: "Minecraft account not found" }), {
+          status: 404,
+          headers: { "Access-Control-Allow-Origin": "*" }
+        });
+      }
+      const mojangData = await mojangRes.json();
+      const uuid = mojangData.id;
+      const cleanName = mojangData.name;
+
+      const hypixelUrl = `https://api.hypixel.net/v2/skyblock/profiles?uuid=${uuid}`;
       const response = await fetch(hypixelUrl, {
         headers: { 
           "API-Key": env.HYPIXEL_API_KEY,
@@ -31,14 +44,19 @@ export default {
       });
 
       const data = await response.json();
-      if (!data.success || !data.profiles) {
-        return new Response(JSON.stringify({ error: "No profiles found or API error" }), { status: 404 });
+      if (!data.success || !data.profiles || data.profiles.length === 0) {
+        return new Response(JSON.stringify({ error: "No Skyblock profiles found" }), {
+          status: 404,
+          headers: { "Access-Control-Allow-Origin": "*" }
+        });
       }
 
       const activeProfile = data.profiles.find(p => p.selected === true) || data.profiles[0];
       const memberData = activeProfile.members[uuid];
 
       const structuredResult = {
+        name: cleanName,
+        uuid: uuid,
         profileName: activeProfile.cute_name,
         gameMode: activeProfile.game_mode || "Normal",
         skyblockLevel: (memberData.leveling?.experience ?? 0) / 100, 
@@ -61,7 +79,10 @@ export default {
       });
 
     } catch (err) {
-      return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+      return new Response(JSON.stringify({ error: err.message }), { 
+        status: 500,
+        headers: { "Access-Control-Allow-Origin": "*" }
+      });
     }
   }
 };
